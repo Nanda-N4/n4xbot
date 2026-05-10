@@ -78,7 +78,6 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if p:
             cat_info = SETTINGS['categories'].get(p['category'], {})
             caption = f"📦 <b>{p['name']}</b>\n💰 စျေးနှုန်း: <b>{p['price']}</b>\n\n{p.get('desc', '-')}"
-            
             if cat_info.get('has_protocol'):
                 keyboard = [
                     [InlineKeyboardButton("🚀 V2ray (Vless)", callback_data=f"proto_v2ray_{p_id}")],
@@ -135,7 +134,7 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=config.MY_USER_ID, text=admin_msg, parse_mode='HTML')
         await query.edit_message_caption(caption="✅ Admin ထံ အကြောင်းကြားပြီးပါပြီ။ ခေတ္တစောင့်ဆိုင်းပေးပါ။", parse_mode='HTML')
 
-    # --- Admin Side Flow ---
+    # --- Admin Side (Non-Conversation Actions) ---
     elif data == 'adm_manage_cat':
         keyboard = [[InlineKeyboardButton("➕ အမျိုးအစားသစ်ထည့်", callback_data='adm_add_cat_start')]]
         for cid, cat in SETTINGS['categories'].items():
@@ -184,7 +183,7 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- Admin Conversations ---
 async def add_p_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.callback_query.message.reply_text("✨ <b>ပစ္စည်းအမည်:</b>", parse_mode='HTML')
+    await update.callback_query.message.reply_text("✨ <b>ပစ္စည်းအမည်:</b>")
     return A_P_NAME
 
 async def add_p_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -235,7 +234,7 @@ async def add_cat_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def add_cat_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['temp_cat_name'] = update.message.text
     keyboard = [[InlineKeyboardButton("✅ ရွေးခိုင်းမည်", callback_data="proto_yes")], [InlineKeyboardButton("❌ မရွေးခိုင်းပါ", callback_data="proto_no")]]
-    await update.message.reply_text("⚙️ <b>ဤ Category အတွက် Protocol (V2ray/Outline) ရွေးခိုင်းမလား?</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+    await update.message.reply_text("⚙️ <b>Protocol (V2ray/Outline) ရွေးခိုင်းမလား?</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
     return A_CAT_PROTO
 
 async def add_cat_final(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -243,11 +242,11 @@ async def add_cat_final(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = f"cat{int(datetime.now().timestamp())}"
     SETTINGS['categories'][cid] = {"name": context.user_data['temp_cat_name'], "has_protocol": has_proto}
     db.save('settings.json', SETTINGS)
-    await update.callback_query.message.reply_text(f"✅ Category {context.user_data['temp_cat_name']} ထည့်သွင်းပြီးပါပြီ။", reply_markup=admin_home_menu())
+    await update.callback_query.message.reply_text(f"✅ Category {context.user_data['temp_cat_name']} ထည့်ပြီးပါပြီ။", reply_markup=admin_home_menu())
     return ConversationHandler.END
 
 async def welcome_edit_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.callback_query.message.reply_text("📝 <b>Welcome စာသား ပို့ပါ</b>")
+    await update.callback_query.message.reply_text("📝 <b>Welcome စာသား အသစ်ပို့ပါ:</b>")
     return E_WELCOME
 
 async def welcome_edit_save(update: Update, context: ContextTypes.DEFAULT_TYPE):
