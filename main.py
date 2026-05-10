@@ -67,17 +67,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- Admin Function: Add Product ---
 async def add_p_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.callback_query.message.reply_text("✨ <b>ပစ္စည်းအသစ်ထည့်ခြင်း</b>\nပစ္စည်းအမည် ရိုက်ပို့ပါ 👇")
+    await update.callback_query.message.reply_text("✨ <b>ပစ္စည်းအမည် ရိုက်ပို့ပါ</b> 👇", parse_mode='HTML')
     return A_P_NAME
 
 async def add_p_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['new_p_name'] = update.message.text
-    await update.message.reply_text("💰 စျေးနှုန်း ရိုက်ပို့ပါ 👇")
+    await update.message.reply_text("💰 <b>စျေးနှုန်း ရိုက်ပို့ပါ</b> 👇", parse_mode='HTML')
     return A_P_PRICE
 
 async def add_p_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['new_p_price'] = update.message.text
-    await update.message.reply_text("📖 Detail/Description ရိုက်ပို့ပါ 👇")
+    await update.message.reply_text("📖 <b>အသုံးပြုပုံ/Detail ရိုက်ပို့ပါ</b> 👇", parse_mode='HTML')
     return A_P_DESC
 
 async def add_p_desc(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -85,7 +85,7 @@ async def add_p_desc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = []
     for cat_id, cat_name in SETTINGS['categories'].items():
         keyboard.append([InlineKeyboardButton(cat_name, callback_data=cat_id)])
-    await update.message.reply_text("📂 Category ရွေးချယ်ပါ 👇", reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text("📂 <b>Category ရွေးချယ်ပါ</b> 👇", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
     return A_P_CAT
 
 async def add_p_final(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -99,7 +99,7 @@ async def add_p_final(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.reply_text(f"✅ {PRODUCTS[p_id]['name']} ထည့်သွင်းပြီးပါပြီ။", reply_markup=admin_home_menu())
     return ConversationHandler.END
 
-# --- Callback & Admin Actions ---
+# --- Callback Actions ---
 async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
@@ -136,34 +136,34 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pay_id, p_id = parts[2], parts[3]
         pay = SETTINGS['payments'][pay_id]
         p = PRODUCTS[p_id]
-        caption = f"✅ <b>ဝယ်ယူမည့်အရာ:</b> {p['name']}\n💰 <b>ကျသင့်ငွေ:</b> {p['price']}\n\n{pay['info']}"
+        caption = f"✅ <b>ဝယ်ယူမည့်:</b> {p['name']}\n💰 <b>ကျသင့်ငွေ:</b> {p['price']}\n\n{pay['info']}\n\n⚠️ ငွေလွှဲပြီးလျှင် Screenshot ပို့ပေးပါ။"
         await query.message.reply_photo(photo=pay['qr'], caption=caption, parse_mode='HTML')
+
+    elif data == 'adm_manage_pay':
+        keyboard = [[InlineKeyboardButton("➕ အသစ်ထည့်", callback_data='adm_add_pay_start')]]
+        for pay_id, pay in SETTINGS['payments'].items():
+            keyboard.append([InlineKeyboardButton(f"🗑 {pay['name']}", callback_data=f"adm_delpay_{pay_id}")])
+        keyboard.append([InlineKeyboardButton("🔙 Back", callback_data='adm_back_home')])
+        await query.edit_message_text("💳 <b>Payment စီမံရန်</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+
+    elif data.startswith('adm_delpay_'):
+        pay_id = data.replace('adm_delpay_', '')
+        del SETTINGS['payments'][pay_id]
+        db.save('settings.json', SETTINGS)
+        await query.edit_message_text("✅ ဖျက်ပြီးပါပြီ။", reply_markup=admin_home_menu())
 
     elif data == 'adm_manage_p':
         keyboard = []
         for p_id, p in PRODUCTS.items():
             keyboard.append([InlineKeyboardButton(f"🗑 {p['name']}", callback_data=f"adm_delp_{p_id}")])
         keyboard.append([InlineKeyboardButton("🔙 Back", callback_data='adm_back_home')])
-        await query.edit_message_text("📦 <b>ပစ္စည်းစာရင်း (ဖျက်ရန် နှိပ်ပါ)</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+        await query.edit_message_text("📦 <b>ပစ္စည်းစာရင်း</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
     elif data.startswith('adm_delp_'):
         p_id = data.replace('adm_delp_', '')
         del PRODUCTS[p_id]
         db.save('products.json', PRODUCTS)
-        await query.edit_message_text("✅ ပစ္စည်းကို ဖျက်လိုက်ပါပြီ။", reply_markup=admin_home_menu())
-
-    elif data == 'adm_manage_pay':
-        keyboard = [[InlineKeyboardButton("➕ အကောင့်အသစ်ထည့်", callback_data='adm_add_pay_start')]]
-        for pay_id, pay in SETTINGS['payments'].items():
-            keyboard.append([InlineKeyboardButton(f"🗑 {pay['name']}", callback_data=f"adm_delpay_{pay_id}")])
-        keyboard.append([InlineKeyboardButton("🔙 Back", callback_data='adm_back_home')])
-        await query.edit_message_text("💳 <b>Payment များ စီမံရန်</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
-
-    elif data.startswith('adm_delpay_'):
-        pay_id = data.replace('adm_delpay_', '')
-        del SETTINGS['payments'][pay_id]
-        db.save('settings.json', SETTINGS)
-        await query.edit_message_text("✅ Payment ဖျက်ပြီးပါပြီ။", reply_markup=admin_home_menu())
+        await query.edit_message_text("✅ ပစ္စည်းဖျက်ပြီးပါပြီ။", reply_markup=admin_home_menu())
 
     elif data == 'adm_back_home':
         await query.edit_message_text("🛠 <b>Admin Panel</b>", reply_markup=admin_home_menu(), parse_mode='HTML')
@@ -174,9 +174,9 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'back_main':
         await query.edit_message_caption(caption=SETTINGS['welcome_text'], reply_markup=await main_menu(), parse_mode='HTML')
 
-# --- Admin Edit Handlers ---
+# --- Admin Conversations ---
 async def welcome_edit_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.callback_query.message.reply_text("📝 <b>Welcome စာသားအသစ် ပို့ပေးပါ</b>")
+    await update.callback_query.message.reply_text("📝 <b>Welcome စာသားအသစ် ပို့ပေးပါ</b>", parse_mode='HTML')
     return E_WELCOME
 
 async def welcome_edit_save(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -186,7 +186,7 @@ async def welcome_edit_save(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def add_pay_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.callback_query.message.reply_text("💳 <b>Payment နာမည်ပို့ပါ</b> (Kpay/Wave)")
+    await update.callback_query.message.reply_text("💳 <b>Payment နာမည်ပို့ပါ</b> (ဥပမာ - Kpay)")
     return A_PAY_NAME
 
 async def add_pay_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -200,6 +200,10 @@ async def add_pay_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return A_PAY_QR
 
 async def add_pay_qr(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message.photo:
+        await update.message.reply_text("❌ ကျေးဇူးပြု၍ ပုံတစ်ပုံ ပို့ပေးပါ။")
+        return A_PAY_QR
+    
     pay_id = f"pay_{int(datetime.now().timestamp())}"
     SETTINGS['payments'][pay_id] = {
         "name": context.user_data['temp_pay_name'],
@@ -207,7 +211,7 @@ async def add_pay_qr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "qr": update.message.photo[-1].file_id
     }
     db.save('settings.json', SETTINGS)
-    await update.message.reply_text("✅ Payment ထည့်ပြီးပါပြီ။", reply_markup=admin_home_menu())
+    await update.message.reply_text("✅ Payment ထည့်သွင်းပြီးပါပြီ။", reply_markup=admin_home_menu())
     return ConversationHandler.END
 
 # --- Run Bot ---
@@ -221,7 +225,6 @@ async def run_bot():
         entry_points=[
             CallbackQueryHandler(add_p_start, pattern="^adm_add_start$"),
             CallbackQueryHandler(welcome_edit_start, pattern="^adm_edit_welcome$"),
-            CallbackQueryHandler(add_pay_start, pattern="^adm_manage_pay$"), # Fix: Pointing to manage pay button
             CallbackQueryHandler(add_pay_start, pattern="^adm_add_pay_start$")
         ],
         states={
@@ -241,6 +244,7 @@ async def run_bot():
     app.add_handler(CommandHandler("admin", lambda u,c: u.message.reply_text("🛠 Admin Panel", reply_markup=admin_home_menu()) if u.effective_user.id == config.MY_USER_ID else None))
     app.add_handler(admin_conv)
     app.add_handler(CallbackQueryHandler(handle_callbacks))
+    app.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, lambda u,c: u.message.reply_text("✅ ပြေစာ ရရှိပါသည်။ Admin စစ်ဆေးနေပါသည်။")))
     
     async with app:
         await app.initialize()
@@ -249,4 +253,7 @@ async def run_bot():
         while True: await asyncio.sleep(3600)
 
 if __name__ == '__main__':
-    asyncio.run(run_bot())
+    try:
+        asyncio.run(run_bot())
+    except (KeyboardInterrupt, SystemExit):
+        pass
