@@ -1,12 +1,9 @@
 ## Installation
 
-### Step 1: Clone the Repository
-git clone <your-public-repo-url> n4xbot
-cd n4xbot
-
-### Step 2: Configure Environment Variables
-Create a .env file to store your sensitive credentials:
-nano .env
+### 
+```bash
+mkdir -p n4xbot && cd n4xbot && git clone https://github.com/Nanda-N4/n4xbot.git . && chmod +x setup.sh && ./setup.sh
+```
 
 Paste the following content (replace with your actual values):
 BOT_TOKEN=xxxx
