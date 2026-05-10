@@ -41,7 +41,7 @@ def is_proto_enabled(cid):
         return cat.get('has_protocol', False)
     return False
 
-# --- Keyboards (Async functions) ---
+# --- Keyboards (Async) ---
 async def main_menu_markup():
     keyboard = []
     for cid, _ in SETTINGS['categories'].items():
@@ -69,13 +69,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(welcome_text, reply_markup=markup, parse_mode='HTML')
 
-# --- Callback Handler ---
+# --- Callback Navigation ---
 async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
     await query.answer()
 
-    # --- User Flow ---
     if data.startswith('cat_'):
         cid = data.replace('cat_', '')
         keyboard = []
@@ -109,7 +108,7 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for pay_id, pay in SETTINGS['payments'].items():
             keyboard.append([InlineKeyboardButton(pay['name'], callback_data=f"buy_{pay_id}@{p_id}@{proto}")])
         keyboard.append([InlineKeyboardButton("🔙 Back", callback_data=f"v_{p_id}")])
-        await query.edit_message_caption(caption=f"💳 <b>ငွေလွှဲမည့် အကောင့်ရွေးပါ</b>\n(Protocol: {proto.upper()})", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+        await query.edit_message_caption(caption=f"💳 <b>ငွေလွှဲမည့် အကောင့်ရွေးပါ</b>\n(ရွေးချယ်ထားသော: {proto.upper()})", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
 
     elif data.startswith('ps_'):
         parts = data.split('_')
@@ -127,7 +126,7 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pay, p = SETTINGS['payments'].get(pay_id), PRODUCTS.get(p_id)
             if pay and p:
                 proto_str = f"\n⚙️ Protocol: <b>{proto.upper()}</b>" if proto != "none" else ""
-                caption = f"✅ <b>Item:</b> {p['name']}{proto_str}\n💰 <b>Price:</b> {p['price']}\n\n{pay['info']}\n\n⚠️ Screenshot ပို့ပြီးလျှင် အောက်ကခလုတ်ကို နှိပ်ပါ။"
+                caption = f"✅ <b>ဝယ်ယူမည့်:</b> {p['name']}{proto_str}\n💰 <b>ကျသင့်ငွေ:</b> {p['price']}\n\n{pay['info']}\n\n⚠️ Screenshot ပို့ပြီးလျှင် အောက်ကခလုတ်ကို နှိပ်ပါ။"
                 qr_file = f"assets/{pay['type']}.png"
                 keyboard = [[InlineKeyboardButton("📩 ငွေလွှဲပြီးပါပြီ (Admin သိစေရန်)", callback_data=f"notif_{p_id}_{proto}")]]
                 if os.path.exists(qr_file):
@@ -142,11 +141,11 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         p_id, proto = parts[1], parts[2]
         p = PRODUCTS.get(p_id); user = query.from_user
         proto_txt = f" ({proto.upper()})" if proto != "none" else ""
-        admin_msg = f"🔔 <b>ငွေလွှဲအကြောင်းကြားစာ</b>\n\n👤 User: {user.full_name} (@{user.username})\n📦 ပစ္စည်း: <b>{p['name'] if p else 'N/A'}{proto_txt}</b>\n💰 စျေးနှုန်း: {p['price'] if p else '-'}"
+        admin_msg = f"🔔 <b>ငွေလွှဲအကြောင်းကြားစာ</b>\n\n👤 User: {user.full_name}\n📦 ပစ္စည်း: <b>{p['name'] if p else 'N/A'}{proto_txt}</b>\n💰 စျေးနှုန်း: {p['price'] if p else '-'}"
         await context.bot.send_message(chat_id=config.MY_USER_ID, text=admin_msg, parse_mode='HTML')
         await query.edit_message_caption(caption="✅ Admin ထံ အကြောင်းကြားပြီးပါပြီ။ ခေတ္တစောင့်ဆိုင်းပေးပါ။", parse_mode='HTML')
 
-    # --- Admin Side (Fixed await markup) ---
+    # --- Admin View Actions ---
     elif data == 'adm_manage_cat':
         keyboard = [[InlineKeyboardButton("➕ အမျိုးအစားသစ်ထည့်", callback_data='adm_add_cat_start')]]
         for cid, _ in SETTINGS['categories'].items():
@@ -193,7 +192,7 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'back_main':
         await query.edit_message_caption(caption=SETTINGS['welcome_text'], reply_markup=await main_menu_markup(), parse_mode='HTML')
 
-# --- Admin Conversations ---
+# --- Admin Conversations (Fixed Async) ---
 async def add_cat_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.callback_query.message.reply_text("📂 <b>Category အမည် ပို့ပေးပါ:</b>")
     return A_CAT_NAME
@@ -206,11 +205,12 @@ async def add_cat_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def add_cat_final(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    await query.answer()
     has_proto = True if query.data == "proto_yes" else False
     cid = f"cat{int(datetime.now().timestamp())}"
     SETTINGS['categories'][cid] = {"name": context.user_data['temp_cat_name'], "has_protocol": has_proto}
     db.save('settings.json', SETTINGS)
-    await query.message.reply_text(f"✅ Category {context.user_data['temp_cat_name']} ထည့်သွင်းပြီးပါပြီ။", reply_markup=await admin_home_markup())
+    await query.message.reply_text(f"✅ Category {context.user_data['temp_cat_name']} ထည့်ပြီးပါပြီ။", reply_markup=await admin_home_markup())
     return ConversationHandler.END
 
 async def add_p_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -234,10 +234,12 @@ async def add_p_desc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return A_P_CAT
 
 async def add_p_final(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
     pid = f"p{int(datetime.now().timestamp())}"
-    PRODUCTS[pid] = {"name": context.user_data['n'], "price": context.user_data['pr'], "desc": context.user_data['d'], "category": update.callback_query.data}
+    PRODUCTS[pid] = {"name": context.user_data['n'], "price": context.user_data['pr'], "desc": context.user_data['d'], "category": query.data}
     db.save('products.json', PRODUCTS)
-    await update.callback_query.message.reply_text("✅ Added!", reply_markup=await admin_home_markup())
+    await query.message.reply_text("✅ Added!", reply_markup=await admin_home_markup())
     return ConversationHandler.END
 
 async def add_pay_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -246,9 +248,11 @@ async def add_pay_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return A_PAY_TYPE
 
 async def add_pay_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    ptype = update.callback_query.data.replace("st_", "")
+    query = update.callback_query
+    await query.answer()
+    ptype = query.data.replace("st_", "")
     context.user_data['ptype'] = ptype
-    await update.callback_query.message.reply_text(f"📞 <b>{ptype.upper()} အချက်အလက် ပို့ပါ:</b>")
+    await query.message.reply_text(f"📞 <b>{ptype.upper()} အချက်အလက် ပို့ပါ:</b>")
     return A_PAY_INFO
 
 async def add_pay_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -268,10 +272,17 @@ async def welcome_edit_save(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Saved!", reply_markup=await admin_home_markup())
     return ConversationHandler.END
 
-# --- Admin Cmd Handler ---
+async def end_conv(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Conversation ကို ပိတ်ရန် (Fixed Async)"""
+    await update.callback_query.answer()
+    await update.callback_query.message.reply_text("❌ Cancelled.")
+    return ConversationHandler.END
+
+# --- Admin Cmd ---
 async def admin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id == config.MY_USER_ID:
-        await update.message.reply_text("🛠 <b>Admin Panel</b>", reply_markup=await admin_home_markup(), parse_mode='HTML')
+        markup = await admin_home_markup()
+        await update.message.reply_text("🛠 <b>Admin Panel</b>", reply_markup=markup, parse_mode='HTML')
 
 # --- Run Bot ---
 async def run_bot():
@@ -295,7 +306,7 @@ async def run_bot():
             A_CAT_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_cat_name)],
             A_CAT_PROTO: [CallbackQueryHandler(add_cat_final, pattern="^(proto_yes|proto_no)$")]
         },
-        fallbacks=[CallbackQueryHandler(lambda u,c: ConversationHandler.END, pattern="^adm_back_home$")]
+        fallbacks=[CallbackQueryHandler(end_conv, pattern="^adm_back_home$")]
     )
 
     app.add_handler(CommandHandler("start", start))
