@@ -25,10 +25,10 @@ SETTINGS = db.load('settings.json', {
     "welcome_img": None,
     "payments": {},
     "categories": {
-        "cat_menu_vip": "🚀 VIP PRO", 
-        "cat_menu_sg": "🇸🇬 Singapore", 
-        "cat_menu_jp": "🇯🇵 Japan", 
-        "cat_menu_sl": "📡 Starlink"
+        "cat1": "🚀 VIP PRO", 
+        "cat2": "🇸🇬 Singapore", 
+        "cat3": "🇯🇵 Japan", 
+        "cat4": "📡 Starlink"
     }
 })
 
@@ -39,6 +39,7 @@ SETTINGS = db.load('settings.json', {
 # --- Keyboards ---
 async def main_menu():
     keyboard = []
+    # Dynamic categories from settings
     for cid, name in SETTINGS['categories'].items():
         keyboard.append([InlineKeyboardButton(name, callback_data=f"cat_{cid}")])
     keyboard.append([InlineKeyboardButton("👨‍💻 Admin နှင့် တိုက်ရိုက်ပြောရန်", url=config.ADMIN_LINK)])
@@ -73,9 +74,12 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data.startswith('cat_'):
         cid = data.replace('cat_', '')
         keyboard = []
+        # Find products matching this category ID
         for p_id, p in PRODUCTS.items():
+            # Check for exact match or old ID naming convention
             if p.get('category') == cid or p.get('category') == data:
                 keyboard.append([InlineKeyboardButton(f"{p['name']} - {p['price']}", callback_data=f"v_{p_id}")])
+        
         keyboard.append([InlineKeyboardButton("🔙 Back", callback_data='back_main')])
         cat_name = SETTINGS['categories'].get(cid, "ပစ္စည်းများ")
         await query.edit_message_caption(caption=f"📦 <b>{cat_name}</b>", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
@@ -107,7 +111,9 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if pay and p:
                 caption = f"✅ <b>Item:</b> {p['name']}\n💰 <b>Price:</b> {p['price']}\n\n{pay['info']}\n\n⚠️ Screenshot ပို့ပြီးလျှင် အောက်ကခလုတ်ကို နှိပ်ပါ။"
                 qr_file = f"assets/{pay['type']}.png"
+                # Notify Admin Button added here
                 keyboard = [[InlineKeyboardButton("📩 ငွေလွှဲပြီးပါပြီ (Admin သိစေရန်)", callback_data=f"notif_{p_id}")]]
+                
                 if os.path.exists(qr_file):
                     await context.bot.send_photo(chat_id=query.message.chat_id, photo=open(qr_file, 'rb'), caption=caption, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
                 else:
@@ -253,7 +259,7 @@ async def run_bot():
             A_P_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_p_name)],
             A_P_PRICE: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_p_price)],
             A_P_DESC: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_p_desc)],
-            A_P_CAT: [CallbackQueryHandler(add_p_final, pattern="^c[1-4]$|^cat_")],
+            A_P_CAT: [CallbackQueryHandler(add_p_final, pattern="^cat")],
             A_PAY_TYPE: [CallbackQueryHandler(add_pay_type, pattern="^st_")],
             A_PAY_INFO: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_pay_info)],
             E_WELCOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, welcome_edit_save)],
