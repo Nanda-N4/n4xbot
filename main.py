@@ -65,7 +65,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = SETTINGS['welcome_text']
     img = SETTINGS['welcome_img'] or config.IMG_WELCOME
     try:
-        await update.message.reply_photo(photo=img, caption=welcome_text, reply_markup=await main_menu(), parse_mode='HTML')
+        if img and os.path.exists(img):
+            await update.message.reply_photo(photo=open(img, 'rb'), caption=welcome_text, reply_markup=await main_menu(), parse_mode='HTML')
+        else:
+            await update.message.reply_text(welcome_text, reply_markup=await main_menu(), parse_mode='HTML')
     except:
         await update.message.reply_text(welcome_text, reply_markup=await main_menu(), parse_mode='HTML')
 
@@ -137,13 +140,16 @@ async def handle_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == 'adm_close':
         await query.message.delete()
 
-def main():
+# --- Main Logic Fix ---
+async def run_bot():
     app = Application.builder().token(config.TOKEN).build()
     
+    # Scheduler Setup
     scheduler = AsyncIOScheduler()
     scheduler.add_job(send_daily_backup, 'cron', hour=0, minute=0, args=[app])
     scheduler.start()
 
+    # Admin Conversations
     admin_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(add_p_start, pattern="^adm_add_start$")],
         states={
@@ -161,7 +167,19 @@ def main():
     app.add_handler(admin_conv)
     app.add_handler(CallbackQueryHandler(handle_callbacks))
     
-    app.run_polling(drop_pending_updates=True)
+    print("🚀 N4XBOT is running successfully...")
+    
+    # Correct way to run polling inside the event loop
+    async with app:
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling(drop_pending_updates=True)
+        # Keep the bot alive
+        while True:
+            await asyncio.sleep(3600)
 
 if __name__ == '__main__':
-    main()
+    try:
+        asyncio.run(run_bot())
+    except (KeyboardInterrupt, SystemError):
+        pass
